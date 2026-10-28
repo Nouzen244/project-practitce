@@ -4,3 +4,6 @@ httpx==0.28.1
 ruff
 mlflow
 dvc
+matplotlib==3.11.2
+ipykernel==7.4.0
+nbconvert==7.17.2

@@ -11,7 +11,7 @@ ridership: date, hour, station_id, event, passengers   (входы за час)
 С --external (выход metro.opendata) погода и календарь берутся реальные, а
 объём каждой станции калибруется по квартальным входам data.mos.ru.
 
-Запуск:  python -m metro.synth --start 2023-01-01 --end 2025-12-31 --out data/raw \
+Запуск:  python -m metro.synth --start 2023-01-01 --end 2026-10-27 --out data/raw \
              [--external data/external]
 """
 from __future__ import annotations
@@ -143,7 +143,7 @@ def generate(start: str, end: str, seed: int = 42, weather: pd.DataFrame | None 
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--start", default="2023-01-01")
-    p.add_argument("--end", default="2025-12-31")
+    p.add_argument("--end", default="2026-10-27")
     p.add_argument("--out", default="data/raw")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--external", help="папка с выходом metro.opendata (реальные погода/календарь/объёмы)")

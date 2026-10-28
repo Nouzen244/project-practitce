@@ -1,39 +1,39 @@
 schema: '2.0'
 stages:
   fetch:
-    cmd: python -m metro.opendata --start 2023-01-01 --end 2025-12-31 --out 
+    cmd: python -m metro.opendata --start 2023-01-01 --end 2026-10-27 --out 
       data/external
     deps:
     - path: src/metro/opendata.py
       hash: md5
-      md5: 1c9bceb41af812719b7807ae8492a65f
+      md5: 06d943a1425ec969ce4c165fbc03085f
       size: 6013
     params:
       params.yaml:
-        data.end: '2025-12-31'
+        data.end: '2026-10-27'
         data.start: '2023-01-01'
     outs:
     - path: data/external
       hash: md5
-      md5: 4ca2fe43b9923597dc29b31c14ca9b46.dir
-      size: 111056
+      md5: 605723ff2189517463737ef1b564b942.dir
+      size: 115185
       nfiles: 3
   synth:
-    cmd: python -m metro.synth --start 2023-01-01 --end 2025-12-31 --seed 42 
+    cmd: python -m metro.synth --start 2023-01-01 --end 2026-10-27 --seed 42 
       --external data/external --out data/raw
     deps:
     - path: data/external
       hash: md5
-      md5: 4ca2fe43b9923597dc29b31c14ca9b46.dir
-      size: 111056
+      md5: 605723ff2189517463737ef1b564b942.dir
+      size: 115185
       nfiles: 3
     - path: src/metro/stations.py
       hash: md5
-      md5: 087f28ff32860fc0f4de1a2ab97eb5af
-      size: 3182
+      md5: b56b1a0dbca05e3d1e7b3658d96a617d
+      size: 3236
     - path: src/metro/synth.py
       hash: md5
-      md5: 0ff3f3d656ad484879b91aa24fbd334f
+      md5: 1fe791951ab9a0eec2bedc49726c6a57
       size: 8311
     params:
       params.yaml:
@@ -41,8 +41,8 @@ stages:
     outs:
     - path: data/raw
       hash: md5
-      md5: 06c7925922c0ad2ed45fcdc8be9c9409.dir
-      size: 978900
+      md5: bb25f54a7a5df6b42f558476215d7852.dir
+      size: 1237552
       nfiles: 3
   validate:
     cmd: python -m metro.validate --data data/raw --external data/external 
@@ -50,18 +50,18 @@ stages:
     deps:
     - path: data/external
       hash: md5
-      md5: 4ca2fe43b9923597dc29b31c14ca9b46.dir
-      size: 111056
+      md5: 605723ff2189517463737ef1b564b942.dir
+      size: 115185
       nfiles: 3
     - path: data/raw
       hash: md5
-      md5: 06c7925922c0ad2ed45fcdc8be9c9409.dir
-      size: 978900
+      md5: bb25f54a7a5df6b42f558476215d7852.dir
+      size: 1237552
       nfiles: 3
     - path: src/metro/validate.py
       hash: md5
-      md5: 3f5b80c4050f4a9c77e7496cc5fbd694
-      size: 7228
+      md5: 5649ce628293d64c69747886afd62168
+      size: 7393
     outs:
     - path: reports/data_quality.json
       hash: md5

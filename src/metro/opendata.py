@@ -5,7 +5,7 @@ metro:     data.mos.ru, набор 62743 «Пассажиропоток по с�
 weather:   Open-Meteo archive (ERA5) — средняя температура и осадки по дням, Москва
 calendar:  isdayoff.ru — производственный календарь РФ (с переносами)
 
-Запуск:  python -m metro.opendata --start 2023-01-01 --end 2025-12-31 --out data/external
+Запуск:  python -m metro.opendata --start 2023-01-01 --end 2026-10-27 --out data/external
 """
 from __future__ import annotations
 
@@ -114,7 +114,7 @@ def fetch_calendar(start: str, end: str) -> pd.DataFrame:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--start", default="2023-01-01")
-    p.add_argument("--end", default="2025-12-31")
+    p.add_argument("--end", default="2026-10-27")
     p.add_argument("--out", default="data/external")
     a = p.parse_args()
     out = Path(a.out)
