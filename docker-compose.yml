@@ -1,0 +1,43 @@
+# Локальный стенд: PostgreSQL + API + Prometheus + Grafana
+# Порядок запуска — в README.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: metro
+      POSTGRES_USER: metro
+      POSTGRES_PASSWORD: metro
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metro"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://metro:metro@db:5432/metro
+      SCHEDULER_ENABLED: "1"
+      SCHEDULER_HOUR_UTC: "1"
+    ports: ["8000:8000"]
+    volumes: ["./data:/app/data:ro"]
+    depends_on:
+      db: {condition: service_healthy}
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes: ["./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["9090:9090"]
+    depends_on: [api]
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes: ["./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro"]
+    ports: ["3000:3000"]
+    depends_on: [prometheus]
+
+volumes:
+  pgdata:
