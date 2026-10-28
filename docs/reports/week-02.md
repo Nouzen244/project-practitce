@@ -4,9 +4,9 @@
 
 ## Как показать (7–10 минут)
 
-Состояние проекта на конец недели 2 — тег [`week-2`](https://github.com/Nouzen244/project-practitce/tree/week-2).
+Все ссылки ниже ведут в ветку `main`: там итоговое состояние недели 2 вместе с ноутбуком и данными до октября 2026.
 
-**Главное — ноутбук с графиками [`notebooks/week2_demo.ipynb`](https://github.com/Nouzen244/project-practitce/blob/week-2/notebooks/week2_demo.ipynb).**
+**Главное — ноутбук с графиками [`notebooks/week2_demo.ipynb`](https://github.com/Nouzen244/project-practitce/blob/main/notebooks/week2_demo.ipynb).**
 Графики уже сохранены в файле, поэтому на GitHub он открывается сразу, без запуска.
 Чтобы показать вживую: открыть файл в VS Code → выбрать ядро `.venv` → **Run All** (≈20 с).
 Идёте сверху вниз: реальные данные → синтетика против реальности → суточные профили →
@@ -16,8 +16,8 @@
 
 1. **Этот отчёт**: источники данных, схема синтетики, таблица «что нашли в реальных данных» (3 мин).
 2. **[Набор на data.mos.ru](https://data.mos.ru/opendata/62743)** — откуда реальные цифры (30 с).
-3. **[`dvc.yaml`](https://github.com/Nouzen244/project-practitce/blob/week-2/dvc.yaml)** — пайплайн из трёх стадий (30 с).
-4. **[`reports/data_quality.json`](https://github.com/Nouzen244/project-practitce/blob/week-2/reports/data_quality.json)** —
+3. **[`dvc.yaml`](https://github.com/Nouzen244/project-practitce/blob/main/dvc.yaml)** — пайплайн из трёх стадий (30 с).
+4. **[`reports/data_quality.json`](https://github.com/Nouzen244/project-practitce/blob/main/reports/data_quality.json)** —
    результат проверок: 0 ошибок, 6 предупреждений (30 с).
 5. **Вкладка Actions** — CI с задачей `etl-postgres` (30 с).
 
