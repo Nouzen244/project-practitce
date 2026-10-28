@@ -1,0 +1,35 @@
+# Пайплайн данных: открытые данные → калиброванная синтетика → проверки качества.
+# Запуск (PYTHONPATH=src):  dvc repro      Граф стадий:  dvc dag
+stages:
+  fetch:
+    cmd: python -m metro.opendata --start ${data.start} --end ${data.end} --out data/external
+    deps:
+      - src/metro/opendata.py
+    params:
+      - data.start
+      - data.end
+    outs:
+      - data/external
+
+  synth:
+    cmd: >-
+      python -m metro.synth --start ${data.start} --end ${data.end} --seed ${data.seed}
+      --external data/external --out data/raw
+    deps:
+      - data/external
+      - src/metro/synth.py
+      - src/metro/stations.py
+    params:
+      - data.seed
+    outs:
+      - data/raw
+
+  validate:
+    cmd: python -m metro.validate --data data/raw --external data/external --report reports/data_quality.json
+    deps:
+      - data/raw
+      - data/external
+      - src/metro/validate.py
+    metrics:
+      - reports/data_quality.json:
+          cache: false

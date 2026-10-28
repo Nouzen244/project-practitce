@@ -18,6 +18,36 @@ jobs:
       - run: ruff check src tests
       - run: pytest -q
 
+  etl-postgres:
+    # ETL и проверки качества на настоящем PostgreSQL (как в docker-compose)
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_DB: metro
+          POSTGRES_USER: metro
+          POSTGRES_PASSWORD: metro
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U metro" --health-interval 5s --health-retries 10
+    env:
+      PYTHONPATH: src
+      DATABASE_URL: postgresql+psycopg://metro:metro@localhost:5432/metro
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m metro.synth --start 2025-01-01 --end 2025-03-31 --out data/raw
+      - run: python -m metro.validate --data data/raw
+      - run: python -m app.etl --data data/raw
+      - name: Проверить, что данные в БД
+        run: |
+          python -c "import os, sqlalchemy as sa; c = sa.create_engine(os.environ['DATABASE_URL']).connect(); n = c.execute(sa.text('select count(*) from ridership')).scalar(); print(n); assert n == 90 * 19 * 26"
+
   docker:
     needs: test
     runs-on: ubuntu-latest

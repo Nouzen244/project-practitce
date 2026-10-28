@@ -1,0 +1,42 @@
+{
+  "errors": 0,
+  "warnings": 6,
+  "issues": [
+    {
+      "level": "warning",
+      "table": "metro_quarterly",
+      "check": "stations",
+      "detail": "есть в data.mos.ru, нет в справочнике: ['Потапово']"
+    },
+    {
+      "level": "warning",
+      "table": "metro_quarterly",
+      "check": "zeros",
+      "detail": "нулевые входы: ['Библиотека имени Ленина']"
+    },
+    {
+      "level": "warning",
+      "table": "metro_quarterly",
+      "check": "completeness",
+      "detail": "2021 Q3: 21 станций из 27"
+    },
+    {
+      "level": "warning",
+      "table": "metro_quarterly",
+      "check": "completeness",
+      "detail": "2024 Q4: 15 станций из 27"
+    },
+    {
+      "level": "warning",
+      "table": "metro_quarterly",
+      "check": "completeness",
+      "detail": "2025 Q4: 11 станций из 27"
+    },
+    {
+      "level": "warning",
+      "table": "metro_quarterly",
+      "check": "completeness",
+      "detail": "2026 Q3: 1 станций из 27"
+    }
+  ]
+}

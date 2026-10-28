@@ -15,15 +15,19 @@ def client(tmp_path_factory, monkeypatch_session):
         df.to_parquet(raw / f"{name}.parquet", index=False)
     model.train(str(raw), str(tmp / "models"))
 
-    monkeypatch_session.setenv("DATABASE_URL", f"sqlite:///{tmp / 'test.db'}")
-    monkeypatch_session.setenv("MODEL_PATH", str(tmp / "models" / "model.joblib"))
-    monkeypatch_session.setenv("METRICS_PATH", str(tmp / "models" / "metrics.json"))
-    # env задаём до первого импорта app.* — настройки читаются при импорте
+    # настройки читаются при импорте app.config, а другие тесты могли импортировать его
+    # раньше — поэтому подменяем сам объект settings, а не переменные окружения
+    import dataclasses
+
     import app.config
     import app.etl
     import app.main
     from app import db
-    app.etl.load(db.make_engine(app.config.settings.database_url), str(raw))
+    test_settings = dataclasses.replace(
+        app.config.settings, database_url=f"sqlite:///{tmp / 'test.db'}",
+        model_path=str(tmp / "models" / "model.joblib"), metrics_path=str(tmp / "models" / "metrics.json"))
+    monkeypatch_session.setattr(app.main, "settings", test_settings)
+    app.etl.load(db.make_engine(test_settings.database_url), str(raw))
     with TestClient(app.main.app) as c:
         yield c
 

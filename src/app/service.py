@@ -48,7 +48,7 @@ class ForecastService:
 
     def _require_model(self):
         if self.model is None:
-            raise ModelNotLoaded("Модель не загружена: обучите её (python -m metro.model train)")
+            raise ModelNotLoaded("Модель не загружена: обучите её (python -m metro.train)")
         return self.model
 
     # ---------- данные ----------

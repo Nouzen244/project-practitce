@@ -50,6 +50,19 @@ calendar = Table(
     "calendar", metadata,
     Column("date", Date, primary_key=True),
     Column("is_holiday", Boolean, nullable=False),
+    Column("is_dayoff", Boolean, nullable=False),
+)
+
+# Квартальные входы/выходы по всем станциям метро (data.mos.ru, набор 62743) — для
+# калибровки синтетики и сверки модели с реальными объёмами
+metro_quarterly = Table(
+    "metro_quarterly", metadata,
+    Column("station", String, primary_key=True),
+    Column("line", String, primary_key=True),
+    Column("year", Integer, primary_key=True),
+    Column("quarter", Integer, primary_key=True),
+    Column("entries", Integer, nullable=False),
+    Column("exits", Integer, nullable=False),
 )
 
 forecast_runs = Table(

@@ -1,13 +1,18 @@
 """Генератор синтетических данных о пассажиропотоке.
 
-Нужен, пока нет достаточного объёма открытых данных (риск из задания).
-Схема совпадает с той, что ETL пишет из реальных источников:
+Нужен, пока нет почасовых открытых данных (риск из задания): data.mos.ru
+публикует только входы по станциям за квартал. Схема совпадает с той, что ETL
+пишет из реальных источников:
 
 weather:   date, temp_c, precip_mm
-calendar:  date, is_holiday
+calendar:  date, is_holiday, is_dayoff   (is_dayoff — нерабочий день с учётом переносов)
 ridership: date, hour, station_id, event, passengers   (входы за час)
 
-Запуск:  python -m metro.synth --start 2023-01-01 --end 2025-12-31 --out data/raw
+С --external (выход metro.opendata) погода и календарь берутся реальные, а
+объём каждой станции калибруется по квартальным входам data.mos.ru.
+
+Запуск:  python -m metro.synth --start 2023-01-01 --end 2025-12-31 --out data/raw \
+             [--external data/external]
 """
 from __future__ import annotations
 
@@ -45,6 +50,41 @@ def make_weather(dates: pd.DatetimeIndex, rng: np.random.Generator) -> pd.DataFr
     return pd.DataFrame({"date": dates.date, "temp_c": temp.round(1), "precip_mm": precip.round(1)})
 
 
+def day_level(d: pd.Timestamp, dayoff: bool, holiday: bool, t0: pd.Timestamp) -> float:
+    """Уровень дня относительно будня: выходные/праздники, лето, январь, тренд."""
+    level = 1.0
+    if dayoff:
+        level *= 0.55 if d.dayofweek == 6 or holiday else 0.65
+    if d.month in (7, 8):
+        level *= 0.85
+    if d.month == 1 and d.day <= 8:
+        level *= 0.8
+    return level * (1 + 0.02 * (d - t0).days / 365)
+
+
+def calibrate_bases(quarterly: pd.DataFrame, calendar: pd.DataFrame, start: str, end: str,
+                    line: str = "Сокольническая линия") -> dict[int, float]:
+    """Средний вход в будний день по каждой станции из квартальных данных data.mos.ru.
+
+    Для каждого полного квартала: base = входы за квартал / Σ уровней дней квартала.
+    Итог — медиана по кварталам. Станции без данных (или с нулями) не калибруются.
+    """
+    cal = calendar.set_index(pd.to_datetime(calendar["date"]))
+    t0 = pd.Timestamp(start)
+    q = quarterly[(quarterly["line"] == line) & (quarterly["entries"] > 0)]
+    by_name = {s["name"]: s["id"] for s in STATIONS}
+    out: dict[int, list[float]] = {}
+    for r in q.itertuples():
+        days = pd.date_range(pd.Period(year=r.year, quarter=r.quarter, freq="Q").start_time,
+                             pd.Period(year=r.year, quarter=r.quarter, freq="Q").end_time.normalize())
+        if r.station not in by_name or days[0] < pd.Timestamp(start) or days[-1] > pd.Timestamp(end):
+            continue
+        levels = sum(day_level(d, bool(cal.at[d, "is_dayoff"]), bool(cal.at[d, "is_holiday"]), t0)
+                     for d in days)
+        out.setdefault(by_name[r.station], []).append(r.entries / levels)
+    return {sid: float(np.median(v)) for sid, v in out.items()}
+
+
 def make_events(dates: pd.DatetimeIndex, rng: np.random.Generator) -> set[tuple]:
     """Матчи/концерты у Лужников: ~3 вечерних события в месяц, станции 15–16."""
     events = set()
@@ -56,28 +96,28 @@ def make_events(dates: pd.DatetimeIndex, rng: np.random.Generator) -> set[tuple]
     return events
 
 
-def generate(start: str, end: str, seed: int = 42) -> dict[str, pd.DataFrame]:
+def generate(start: str, end: str, seed: int = 42, weather: pd.DataFrame | None = None,
+             calendar: pd.DataFrame | None = None,
+             bases: dict[int, float] | None = None) -> dict[str, pd.DataFrame]:
+    """weather/calendar — реальные таблицы (иначе генерируются), bases — объёмы станций."""
     rng = np.random.default_rng(seed)
     dates = pd.date_range(start, end, freq="D")
-    weather = make_weather(dates, rng)
-    calendar = pd.DataFrame({"date": dates.date, "is_holiday": [is_holiday(d) for d in dates]})
+    synth_weather = make_weather(dates, rng)  # вызывается всегда, чтобы не сдвигать rng
+    weather = weather if weather is not None else synth_weather
+    if calendar is None:
+        calendar = pd.DataFrame({"date": dates.date, "is_holiday": [is_holiday(d) for d in dates]})
+        calendar["is_dayoff"] = calendar["is_holiday"] | (dates.dayofweek >= 5)
     events = make_events(dates, rng)
+    bases = bases or {}
 
     w = weather.set_index("date")
+    c = calendar.set_index("date")
     t0 = dates[0]
     rows = []
     for d in dates:
         day = d.date()
-        weekend = d.dayofweek >= 5 or is_holiday(d)
-        # уровень дня: выходные/праздники, лето, тренд, погода
-        level = 1.0
-        if weekend:
-            level *= 0.55 if d.dayofweek == 6 or is_holiday(d) else 0.65
-        if d.month in (7, 8):
-            level *= 0.85
-        if d.month == 1 and d.day <= 8:
-            level *= 0.8
-        level *= 1 + 0.02 * (d - t0).days / 365
+        weekend = bool(c.loc[day, "is_dayoff"])
+        level = day_level(d, weekend, bool(c.loc[day, "is_holiday"]), t0)
         temp, precip = w.loc[day, "temp_c"], w.loc[day, "precip_mm"]
         if precip > 8:
             level *= 1.05
@@ -89,14 +129,15 @@ def generate(start: str, end: str, seed: int = 42) -> dict[str, pd.DataFrame]:
             prof = np.array(_WEEKEND_PROFILE if weekend else _PROFILES[st["kind"]], dtype=float)
             prof /= prof.sum()
             st_noise = rng.lognormal(0, 0.06, len(HOURS))
-            vals = st["base"] * level * day_noise * prof * st_noise
+            vals = bases.get(st["id"], st["base"]) * level * day_noise * prof * st_noise
             for i, h in enumerate(HOURS):
                 ev = (day, h, st["id"]) in events
                 v = vals[i] * (2.5 if ev else 1.0)
                 rows.append((day, h, st["id"], int(ev), round(v)))
 
     ridership = pd.DataFrame(rows, columns=["date", "hour", "station_id", "event", "passengers"])
-    return {"weather": weather, "calendar": calendar, "ridership": ridership}
+    return {"weather": weather, "calendar": calendar[["date", "is_holiday", "is_dayoff"]].reset_index(drop=True),
+            "ridership": ridership}
 
 
 def main() -> None:
@@ -105,10 +146,20 @@ def main() -> None:
     p.add_argument("--end", default="2025-12-31")
     p.add_argument("--out", default="data/raw")
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--external", help="папка с выходом metro.opendata (реальные погода/календарь/объёмы)")
     a = p.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    for name, df in generate(a.start, a.end, a.seed).items():
+    kw = {}
+    if a.external:
+        ext = Path(a.external)
+        weather, calendar = (pd.read_parquet(ext / f"{n}.parquet") for n in ("weather", "calendar"))
+        for df in (weather, calendar):
+            df["date"] = pd.to_datetime(df["date"]).dt.date
+        bases = calibrate_bases(pd.read_parquet(ext / "metro_quarterly.parquet"), calendar, a.start, a.end)
+        print(f"калибровка по data.mos.ru: {len(bases)} из {len(STATIONS)} станций")
+        kw = {"weather": weather, "calendar": calendar, "bases": bases}
+    for name, df in generate(a.start, a.end, a.seed, **kw).items():
         df.to_parquet(out / f"{name}.parquet", index=False)
         print(f"{name}: {len(df)} строк -> {out / name}.parquet")
 

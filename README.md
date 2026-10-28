@@ -4,12 +4,16 @@
 
 План на 8 недель и задачи команды: [docs/PLAN.md](docs/PLAN.md). Карточки для Kanban (импорт CSV в Jira/Trello): [docs/kanban.csv](docs/kanban.csv).
 
+Отчёты по неделям: [неделя 1 — требования](docs/reports/week-01.md) · [неделя 2 — данные и ETL](docs/reports/week-02.md).
+
 ## Структура
 
 ```
 src/metro/      данные и модель
   stations.py   справочник станций линии
-  synth.py      генератор синтетических данных (схема как у реальных)
+  opendata.py   загрузка открытых данных: data.mos.ru, Open-Meteo, производственный календарь
+  synth.py      генератор синтетических данных (схема как у реальных, калибровка по data.mos.ru)
+  validate.py   проверки качества данных перед загрузкой
   features.py   признаки: календарь, погода, события, лаги 7/14 дней
   model.py      метрики, модели, прогноз на 7 дней
   train.py      CLI обучения
@@ -20,9 +24,10 @@ src/app/        backend на FastAPI
   db.py         схема PostgreSQL
   etl.py        загрузка данных в БД
   schemas.py    схемы запросов
-tests/          сквозные тесты API
+tests/          сквозные тесты API и тесты слоя данных
 monitoring/     Prometheus и Grafana
-docs/           план и Kanban
+docs/           план, Kanban, требования (week1/), отчёты (reports/)
+dvc.yaml        пайплайн данных: fetch → synth → validate
 ```
 
 ## Быстрый старт (локально, SQLite)
@@ -32,7 +37,8 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements-dev.txt
 export PYTHONPATH=src                                   # Windows: set PYTHONPATH=src
 
-python -m metro.synth --out data/raw                    # данные 2023–2025
+dvc repro                                               # открытые данные → синтетика → проверки
+# без DVC: python -m metro.opendata && python -m metro.synth --external data/external
 python -m metro.train --data data/raw --out models      # обучение и метрики
 python -m app.etl --data data/raw                       # загрузка в БД
 uvicorn app.main:app --reload                           # http://localhost:8000/docs
